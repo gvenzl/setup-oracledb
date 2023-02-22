@@ -16,11 +16,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ORADATA="/opt/oracle/oradata"
+ORADATA_NEW="/opt/oracle/oradata"
+ORADATA_OLD="/u01/app/oracle/oradata"
+ORADATA=${ORADATA_NEW}
 DEFAULT_CONTAINER_NAME="oracledb"
-DEFAULT_HEALTH_SCRIPT="/opt/oracle/checkDBStatus.sh"
 
-HEALTH_SCRIPT="${DEFAULT_HEALTH_SCRIPT}"
 HEALTH_MAX_RETRIES=20
 HEALTH_INTERVAL=10
 
@@ -28,13 +28,20 @@ DOCKER_ARGS=""
 DOCKER_IMAGE=""
 CONTAINER_NAME=""
 VALIDATION="OK"
+FASTSTART=""
 
 ###############################################################################
 echo "::group::🔍 Verifying inputs"
 
-# IMAGE
-echo "✅ image set to ${SETUP_IMAGE}"
-DOCKER_IMAGE="${SETUP_IMAGE}"
+# TAG
+if [ -z "${SETUP_TAG}" ]; then
+    SETUP_TAG="latest"
+fi
+echo "✅ tag set to ${SETUP_TAG}"
+if [ "${SETUP_TAG}" = "11*" ]; then
+    ORADATA=${ORADATA_OLD}
+fi
+DOCKER_IMAGE="gvenzl/oracle-xe:${SETUP_TAG}"
 
 # PORT
 echo "✅ port set to ${SETUP_PORT}"
@@ -49,15 +56,6 @@ else
     CONTAINER_NAME=${DEFAULT_CONTAINER_NAME}
 fi
 DOCKER_ARGS="${DOCKER_ARGS} --name ${CONTAINER_NAME}"
-
-# HEALTH_SCRIPT
-if [ -n "${SETUP_HEALTH_SCRIPT}" ]; then
-    echo "✅ healthcheck script set to ${SETUP_HEALTH_SCRIPT}"
-    HEALTH_SCRIPT=${SETUP_HEALTH_SCRIPT}
-else
-    echo "☑️️ healthcheck script set to ${DEFAULT_HEALTH_SCRIPT}"
-    HEALTH_SCRIPT=${DEFAULT_HEALTH_SCRIPT}
-fi
 
 # HEALTH_MAX_RETRIES
 if [ -n "${SETUP_HEALTH_MAX_RETRIES}" ]; then
@@ -79,69 +77,54 @@ fi
 
 # VOLUME
 if [ -n "${SETUP_VOLUME}" ]; then
-    echo "✅ volume set to ${SETUP_VOLUME} mapped to ${ORADATA}"
-    DOCKER_ARGS="${DOCKER_ARGS} -v ${SETUP_VOLUME}:${ORADATA}"
-    chmod 777 ${SETUP_VOLUME}
+    # skip volume if tag ends with 'faststart'
+    FASTSTART=$(echo "${SETUP_TAG}" | grep -Eq "^.*faststart$" && echo "true" || echo "false")
+    if [ "${FASTSTART}" = "true" ]; then
+        echo "⚠️ Volume ${SETUP_VOLUME} skipped because tag is ${SETUP_TAG}"
+    else
+        echo "✅ volume set to ${SETUP_VOLUME} mapped to ${ORADATA}"
+        DOCKER_ARGS="${DOCKER_ARGS} -v ${SETUP_VOLUME}:${ORADATA}"
+        chmod 777 ${SETUP_VOLUME}
+    fi
 fi
 
-# ORACLE_SID
-if [ -n "${ORACLE_SID}" ]; then
-    echo "✅ ORACLE_SID is set"
-    DOCKER_ARGS="${DOCKER_ARGS} -e ORACLE_SID=${ORACLE_SID}"
+# PASSWORD
+if [ -z "${SETUP_ORACLE_PASSWORD}" ]; then
+    echo "⚠️ Oracle password will be randomly generated"
+    DOCKER_ARGS="${DOCKER_ARGS} -e ORACLE_RANDOM_PASSWORD=true"
+else
+    echo "✅ ORACLE_PASSWORD explicitly set"
+    DOCKER_ARGS="${DOCKER_ARGS} -e ORACLE_PASSWORD=${SETUP_ORACLE_PASSWORD}"
 fi
 
-# ORACLE_PDB
-if [ -n "${ORACLE_PDB}" ]; then
-    echo "✅ ORACLE_PDB is set"
-    DOCKER_ARGS="${DOCKER_ARGS} -e ORACLE_PDB=${ORACLE_PDB}"
+# DATABASE
+if [ -n "${SETUP_ORACLE_DATABASE}" ]; then
+    echo "✅ database name set to ${SETUP_ORACLE_DATABASE}"
+    DOCKER_ARGS="${DOCKER_ARGS} -e ORACLE_DATABASE=${SETUP_ORACLE_DATABASE}"
 fi
 
-# ORACLE_PWD
-if [ -n "${ORACLE_PWD}" ]; then
-    echo "✅ ORACLE_PWD is set"
-    DOCKER_ARGS="${DOCKER_ARGS} -e ORACLE_PWD=${ORACLE_PWD}"
+# APP_USER
+if [ -n "${SETUP_APP_USER}" ]; then
+    echo "✅ APP_USER explicitly set"
+    DOCKER_ARGS="${DOCKER_ARGS} -e APP_USER=${SETUP_APP_USER}"
+else
+    echo "❌ APP_USER is not set"
+    VALIDATION=""
 fi
 
-# INIT_SGA_SIZE
-if [ -n "${INIT_SGA_SIZE}" ]; then
-    echo "✅ INIT_SGA_SIZE is set to ${INIT_SGA_SIZE}"
-    DOCKER_ARGS="${DOCKER_ARGS} -e INIT_SGA_SIZE=${INIT_SGA_SIZE}"
+# APP_USER_PASSWORD
+if [ -n "${SETUP_APP_USER_PASSWORD}" ]; then
+    echo "✅ APP_USER_PASSWORD explicitly set"
+    DOCKER_ARGS="${DOCKER_ARGS} -e APP_USER_PASSWORD=${SETUP_APP_USER_PASSWORD}"
+else
+    echo "❌ APP_USER_PASSWORD is not set"
+    VALIDATION=""
 fi
 
-# INIT_PGA_SIZE
-if [ -n "${INIT_PGA_SIZE}" ]; then
-    echo "✅ INIT_PGA_SIZE is set to ${INIT_PGA_SIZE}"
-    DOCKER_ARGS="${DOCKER_ARGS} -e INIT_PGA_SIZE=${INIT_PGA_SIZE}"
-fi
-
-# ORACLE_EDITION
-if [ -n "${ORACLE_EDITION}" ]; then
-    echo "✅ ORACLE_EDITION is set to ${ORACLE_EDITION}"
-    DOCKER_ARGS="${DOCKER_ARGS} -e ORACLE_EDITION=${ORACLE_EDITION}"
-fi
-
-# ORACLE_CHARACTERSET
-if [ -n "${ORACLE_CHARACTERSET}" ]; then
-    echo "✅ ORACLE_CHARACTERSET is set to ${ORACLE_CHARACTERSET}"
-    DOCKER_ARGS="${DOCKER_ARGS} -e ORACLE_CHARACTERSET=${ORACLE_CHARACTERSET}"
-fi
-
-# ENABLE_ARCHIVELOG
-if [ -n "${ENABLE_ARCHIVELOG}" ]; then
-    echo "✅ ENABLE_ARCHIVELOG is set"
-    DOCKER_ARGS="${DOCKER_ARGS} -e ENABLE_ARCHIVELOG=${ENABLE_ARCHIVELOG}"
-fi
-
-# SETUP_SCRIPTS
-if [ -n "${SETUP_SETUP_SCRIPTS}" ]; then
-    echo "✅ setup scripts from ${SETUP_SETUP_SCRIPTS}"
-    DOCKER_ARGS="${DOCKER_ARGS} -v ${SETUP_SETUP_SCRIPTS}:/opt/oracle/scripts/setup"
-fi
-
-# STARTUP_SCRIPTS
+# INIT_SCRIPTS
 if [ -n "${SETUP_STARTUP_SCRIPTS}" ]; then
-    echo "✅ startup scripts from ${SETUP_STARTUP_SCRIPTS}"
-    DOCKER_ARGS="${DOCKER_ARGS} -v ${SETUP_STARTUP_SCRIPTS}:/opt/oracle/scripts/startup"
+    echo "✅ init scripts from ${SETUP_STARTUP_SCRIPTS}"
+    DOCKER_ARGS="${DOCKER_ARGS} -v ${SETUP_STARTUP_SCRIPTS}:/container-entrypoint-initdb.d"
 fi
 
 if [ -n "${VALIDATION}" ]; then
@@ -175,13 +158,7 @@ do
     COUNTER=$(( $COUNTER + 1 ))
     echo "  - try #$COUNTER"
     sleep $HEALTH_INTERVAL
-    DB_IS_UP=$(docker exec "${CONTAINER_NAME}" "${HEALTH_SCRIPT}" && echo "yes" || echo "no")
-    CUSTOM_SCRIPT=$(echo "${HEALTH_SCRIPT}" | grep -Eq "^.*healthcheck.sh$" && echo "false" || echo "true")
-    if [ "${CUSTOM_SCRIPT}" = "true" ]; then
-        # output may contain multiple lines starting with 'The Oracle base remains unchanged with value /opt/oracle'
-        DB_IS_UP=$(echo "${DB_IS_UP}" | tr "\n" "\;")
-        DB_IS_UP=$(echo "${DB_IS_UP}" | cut -d ";" -f 2)
-    fi
+    DB_IS_UP=$(docker exec "${CONTAINER_NAME}" healthcheck.sh && echo "yes" || echo "no")
     if [ "${DB_IS_UP}" = "yes" ]; then
         break
     fi

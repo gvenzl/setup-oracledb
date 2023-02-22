@@ -7,9 +7,29 @@ branding:
   color: 'red'
 
 inputs:
+  image:
+    description: 'An Oracle database image such as container-registry.oracle.com/database/enterprise:21.3.0.0'
+    default: ''
+    required: false
+
+  registry:
+    description: 'Docker registry where the image may be found'
+    default: ''
+    required: false
+
+  registry-username:
+    description: 'Login credentials for the given registry'
+    default: ''
+    required: false
+
+  registry-password:
+    description: 'Login credentials for the given registry'
+    default: ''
+    required: false
+
   tag:
     description: 'Valid image tag from https://github.com/gvenzl/oci-oracle-xe'
-    default: 'latest'
+    default: ''
     required: false
 
   port:
@@ -20,6 +40,11 @@ inputs:
   container-name:
     description: 'Name for the container'
     default: 'oracledb'
+    required: false
+
+  health-script-path:
+    description: 'Path to healthcheck script'
+    default: '/opt/oracle/checkDBStatus.sh'
     required: false
 
   health-max-retries:
@@ -52,7 +77,11 @@ inputs:
     description: 'Define a password for the database schema user specified by `app-user`.'
     required: true
 
-  init-scripts:
+  setup-scripts:
+    description: 'Additional database setup scripts.'
+    required: false
+
+  startup-scripts:
     description: 'Additional database initialization scripts.'
     required: false
 
@@ -66,9 +95,34 @@ runs:
         echo "::error:: Only Linux runners are supported at the moment"
         exit 1
 
+    - name: Login into registry
+      if: inputs.registry-username != ''
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.registry-username }}
+        password: ${{ inputs.registry-password }}
+        logout: true
+
     - name: Setup database
       shell: bash
+      if: inputs.image != ''
       run: sh "${{ github.action_path }}/setup-oracledb.sh"
+      env:
+        SETUP_IMAGE: ${{ inputs.image }}
+        SETUP_PORT: ${{ inputs.port }}
+        SETUP_CONTAINER_NAME: ${{ inputs.container-name }}
+        SETUP_VOLUME: ${{ inputs.volume }}
+        SETUP_SETUP_SCRIPTS: ${{ inputs.setup-scripts }}
+        SETUP_STARTUP_SCRIPTS: ${{ inputs.startup-scripts }}
+        SETUP_HEALTH_SCRIPT: ${{ inputs.health-script-path }}
+        SETUP_HEALTH_MAX_RETRIES: ${{ inputs.health-max-retries }}
+        SETUP_HEALTH_INTERVAL: ${{ inputs.health-interval }}
+
+    - name: Setup database (gvenzl/oracle-xe)
+      shell: bash
+      if: inputs.image == ''
+      run: sh "${{ github.action_path }}/setup-oracledb-gvenzl.sh"
       env:
         SETUP_TAG: ${{ inputs.tag }}
         SETUP_PORT: ${{ inputs.port }}
@@ -80,4 +134,4 @@ runs:
         SETUP_ORACLE_DATABASE: ${{ inputs.oracle-database }}
         SETUP_APP_USER: ${{ inputs.app-user }}
         SETUP_APP_USER_PASSWORD: ${{ inputs.app-user-password }}
-        SETUP_INIT_SCRIPTS: ${{ inputs.init-scripts }}
+        SETUP_STARTUP_SCRIPTS: ${{ inputs.startup-scripts }}
