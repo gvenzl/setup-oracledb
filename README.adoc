@@ -68,6 +68,7 @@ Following inputs may be used as `step.with` keys when using images from `gvenzl/
 | oracle-database    |          |          | Create a new pluggable database with the specified name
 | app-user           | true     |          | Create a new database schema user with the specified name
 | app-user-password  | true     |          | Define a password for the database schema user specified by `app-user`
+| setup-scripts      |          |          | Path to folder with additional database setup scripts
 | startup-scripts    |          |          | Path to folder with additional database startup scripts
 | container-name     |          | oracledb | Name for the database container
 | health-max-retries |          | 20       | Number of tries for checking that the database is up
@@ -78,7 +79,7 @@ A random password will be generated automatically if a value for `oracle-passwor
 
 == Usage
 
-=== Oracle Database Enterprise Edition
+=== Oracle Database from `container-registry.oracle.com`
 
 Log into `container-registry.oracle.com` and run Oracle Enteprise Edition 21.3.0.0
 
@@ -122,7 +123,7 @@ jobs:
           ORACLE_PWD: ${{ secrets.ORACLE_PASSWORD }}
 ----
 
-=== Basic usage
+=== Basic usage with Oracle Database Express Edition from `gvenzl/oracle-xe`
 
 All defaults enabled as explained link:https://github.com/gvenzl/oci-oracle-xe#github-actions[here].
 
