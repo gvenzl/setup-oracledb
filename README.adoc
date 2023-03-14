@@ -1,4 +1,4 @@
-= Setup Oracle DB
+= Setup Oracle Database
 :linkattrs:
 :project-owner: aalmiray
 :project-name:  setup-oracledb
@@ -16,61 +16,61 @@ image:https://img.shields.io/github/v/release/{project-owner}/{project-name}["Gi
 image:https://img.shields.io/twitter/follow/{project-owner}?style=social["Twitter Follow", link="https://twitter.com/aalmiray"]
 image:https://img.shields.io/mastodon/follow/109258009343975439?domain=https%3A%2F%2Fmastodon.social&style=social[Mastodon Follow]
 
-Setups OracleDB using images from link:https://container-registry.oracle.com[] or link:https://github.com/gvenzl/oci-oracle-xe[gvenzl/oci-oracle-xe].
+Sets up Oracle Database using Container images from link:https://container-registry.oracle.com[] or link:https://github.com/gvenzl/oci-oracle-xe[gvenzl/oci-oracle-xe].
 
 IMPORTANT: Only *Linux* runners are supported for the time being.
 
 == Inputs
 
-Following inputs may be used as `step.with` keys when images from `container-registry.oracle.com` are the target:
+Following inputs may be used as `step.with` keys when using images from `container-registry.oracle.com`:
 
 [%header,cols="<2,<,<,<3",width="100%"]
 |===
 | Name               | Required | Default                      | Description
-| image              | true     |                              | Full image name such as `container-registry.oracle.com/database/enterprise:21.3.0.0`
+| image              | true     |                              | Full image name and tag such as `container-registry.oracle.com/database/enterprise:21.3.0.0`
 | registry           |          |                              | Registry where the image may be found, i.e, `container-registry.oracle.com`
-| registry-username  |          |                              | If specified the action will log into the registry
-| registry-password  |          |                              | If specified the action will log into the registry
+| registry-username  |          |                              | If specified, the action will log into the registry with that user
+| registry-password  |          |                              | If specified, the action will log into the registry with that password
 | port               |          | 1521                         | Exposed port for database connections
-| volume             |          |                              | Volume containing database files
-| setup-scripts      |          |                              | Additional database setup scripts
-| startup-scripts    |          |                              | Additional database startup scripts
+| volume             |          |                              | Volume to be mounted to contain database files
+| setup-scripts      |          |                              | Path to folder with additional database setup scripts
+| startup-scripts    |          |                              | Path to folder with additional database startup scripts
 | container-name     |          | oracledb                     | Name for the database container
 | health-script-path |          | /opt/oracle/checkDBStatus.sh | Path to heclthcheck script found inside the image
-| health-max-retries |          | 20                           | Number of tries for checking database is up
+| health-max-retries |          | 20                           | Number of tries for checking that the database is up
 | health-interval    |          | 10                           | Time interval between health checks, in seconds
 |===
 
-The following environment variables will be passed to the container when images from `container-registry.oracle.com` are the target:
+Following environment variables will be passed to the container when using images from `container-registry.oracle.com`:
 
 [%header,cols="<,<3",width="100%"]
 |===
 | Name                | Description
-| ORACLE_SID          | The Oracle Database SID that should be used (default:ORCLCDB)
+| ORACLE_SID          | The Oracle Database SID that should be used (default: ORCLCDB)
 | ORACLE_PDB          | The Oracle Database PDB name that should be used (default: ORCLPDB1)
 | ORACLE_PWD          | The Oracle Database SYS, SYSTEM and PDBADMIN password (default: auto generated)
 | INIT_SGA_SIZE       | The total memory in MB that should be used for all SGA components (optional)
 | INIT_PGA_SIZE       | The target aggregate PGA memory in MB that should be used for all server processes attached to the instance (optional)
 | ORACLE_EDITION      | The Oracle Database Edition (enterprise/standard, default: enterprise)
 | ORACLE_CHARACTERSET | The character set to use when creating the database (default: AL32UTF8)
-| ENABLE_ARCHIVELOG   | To enable archive log mode when creating the database (default: false). Supported 19.3 onwards.
+| ENABLE_ARCHIVELOG   | To enable archive log mode when creating the database (default: false). Supported from 19.3 onwards.
 |===
 
-Following inputs may be used as `step.with` keys when `gvenzl/oracle-xe` images are the target:
+Following inputs may be used as `step.with` keys when using images from `gvenzl/oracle-xe` :
 
 [%header,cols="<2,<,<,<3",width="100%"]
 |===
 | Name               | Required | Default  | Description
 | tag                |          | latest   | Valid image tag from link:https://github.com/gvenzl/oci-oracle-xe[gvenzl/oci-oracle-xe]
 | port               |          | 1521     | Exposed port for database connections
-| volume             |          |          | Volume containing database files
+| volume             |          |          | Volume to be mounted to contain database files
 | oracle-password    |          |          | Password for the Oracle Database `SYS` and `SYSTEM` users
 | oracle-database    |          |          | Create a new pluggable database with the specified name
 | app-user           | true     |          | Create a new database schema user with the specified name
 | app-user-password  | true     |          | Define a password for the database schema user specified by `app-user`
-| startup-scripts    |          |          | Additional database startup scripts
+| startup-scripts    |          |          | Path to folder with additional database startup scripts
 | container-name     |          | oracledb | Name for the database container
-| health-max-retries |          | 20       | Number of tries for checking database is up
+| health-max-retries |          | 20       | Number of tries for checking that the database is up
 | health-interval    |          | 10       | Time interval between health checks, in seconds
 |===
 
@@ -78,7 +78,7 @@ A random password will be generated automatically if a value for `oracle-passwor
 
 == Usage
 
-=== Oracle Enterprise
+=== Oracle Database Enterprise Edition
 
 Log into `container-registry.oracle.com` and run Oracle Enteprise Edition 21.3.0.0
 
@@ -100,7 +100,7 @@ jobs:
           ORACLE_PWD: ${{ secrets.ORACLE_PASSWORD }}
 ----
 
-Alternatively you may log into the container registry using an external action
+Alternatively you may log into the container registry using an external action:
 
 [source,yaml]
 [subs="attributes"]
@@ -122,7 +122,8 @@ jobs:
           ORACLE_PWD: ${{ secrets.ORACLE_PASSWORD }}
 ----
 
-=== Basic
+=== Basic usage
+
 All defaults enabled as explained link:https://github.com/gvenzl/oci-oracle-xe#github-actions[here].
 
 [source,yaml]
@@ -164,7 +165,7 @@ NOTE: Use a secret or explicitly mask the password before using it.
 
 === Persistent Database Container
 
-Database files placed at `~/database-files` will be read and used. You may choose a different location according to your needs.
+Database files placed at `~/database-files` inside the GitHub Action runner will be read and used. You may choose a different location according to your needs.
 
 [source,yaml]
 [subs="attributes"]
@@ -186,7 +187,7 @@ NOTE: The directory `~/database-files` must be writtable by the `oracle` (uid: 5
 
 === Init scripts
 
-SQL scripts placed at `~/my-scripts` will be used to post initialize the database.
+SQL scripts placed at `~/my-scripts` inside the GitHub Action runner will be used to post initialize the database.
 
 [source,yaml]
 [subs="attributes"]
