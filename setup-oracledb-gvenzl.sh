@@ -121,10 +121,16 @@ else
     VALIDATION=""
 fi
 
-# INIT_SCRIPTS
+# SETUP_SCRIPTS
+if [ -n "${SETUP_SETUP_SCRIPTS}" ]; then
+    echo "✅ setup scripts from ${SETUP_SETUP_SCRIPTS}"
+    DOCKER_ARGS="${DOCKER_ARGS} -v ${SETUP_SETUP_SCRIPTS}:/container-entrypoint-initdb.d"
+fi
+
+# STARTUP_SCRIPTS
 if [ -n "${SETUP_STARTUP_SCRIPTS}" ]; then
-    echo "✅ init scripts from ${SETUP_STARTUP_SCRIPTS}"
-    DOCKER_ARGS="${DOCKER_ARGS} -v ${SETUP_STARTUP_SCRIPTS}:/container-entrypoint-initdb.d"
+    echo "✅ startup scripts from ${SETUP_STARTUP_SCRIPTS}"
+    DOCKER_ARGS="${DOCKER_ARGS} -v ${SETUP_STARTUP_SCRIPTS}:/container-entrypoint-startdb.d"
 fi
 
 if [ -n "${VALIDATION}" ]; then
