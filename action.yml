@@ -1,6 +1,6 @@
 name: Oracle-DB
 
-description: 'Setup Oracle DB on Docker'
+description: 'Setup Oracle Database on Docker'
 
 branding:
   icon: 'database'
@@ -134,4 +134,5 @@ runs:
         SETUP_ORACLE_DATABASE: ${{ inputs.oracle-database }}
         SETUP_APP_USER: ${{ inputs.app-user }}
         SETUP_APP_USER_PASSWORD: ${{ inputs.app-user-password }}
+        SETUP_SETUP_SCRIPTS: ${{ inputs.setup-scripts }}
         SETUP_STARTUP_SCRIPTS: ${{ inputs.startup-scripts }}
